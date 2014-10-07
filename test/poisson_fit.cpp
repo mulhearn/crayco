@@ -101,10 +101,14 @@ double logn_gamma (double logE){
 }
 
 double logn_mu(double logE){
-   double a = -4.36;
-   double b = 0.93;
-   double logn = a + b*(logE);
-   return logn;
+  // old mu- only:
+  //double a = -4.36;
+  //double b = 0.93;
+  // new mu- and mu+
+  double a = -3.57;
+  double b = 0.93;
+  double logn = a + b*(logE);
+  return logn;
 }
 
 double logE_gamma (double logn_gamma){
@@ -603,7 +607,7 @@ void mcarray::shower_histograms(){
 }
 
 
-int main_hide(int argc, char * argv[]){   
+int main(int argc, char * argv[]){   
 
 
    mcarray array;
@@ -762,10 +766,10 @@ int main_hide(int argc, char * argv[]){
 }
 
 
-int main(){   
+int main_v2(){   
    int nruns = 20;
    mcarray array;
-   array.rng.SetSeed(0);
+   array.rng.SetSeed(2014);
    shower_fcn & sfcn = shower_fcn::instance();
 
    array.d_flat     = 0.0;

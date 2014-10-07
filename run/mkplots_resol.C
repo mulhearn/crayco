@@ -156,11 +156,11 @@ void mkplots_resol(){
 
 
   dummy1->SetLineColor(COLOR_A);
-  leg1->AddEntry(dummy1, "500/km^{2}", "l");
+  leg1->AddEntry(dummy1, "500 devices/km^{2}", "l");
   dummy2->SetLineColor(COLOR_B);
-  leg1->AddEntry(dummy2, "1000/km^{2}", "l");
+  leg1->AddEntry(dummy2, "1000 devices/km^{2}", "l");
   dummy3->SetLineColor(COLOR_C);
-  leg1->AddEntry(dummy3, "5000/km^{2}", "l");
+  leg1->AddEntry(dummy3, "5000 devices/km^{2}", "l");
 
   dummy4->SetMarkerStyle(STYLE_A);
   dummy4->SetLineColor(1);
