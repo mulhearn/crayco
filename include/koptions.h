@@ -2,7 +2,8 @@
 //
 // author:  Michael Mulhearn
 //
-// The k in koptions stands for "Keep it simple, stupid!"
+// I'm aware there are better versions of this tool available, but there
+// werent' when I first wrote this, and now I am attached to it ;-)
 // 
 // FEATURES:
 // 
