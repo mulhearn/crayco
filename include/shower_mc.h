@@ -2,7 +2,7 @@
 #define __SHOWER_MC_H__
 
 class shower_mc {
-public:
+ public:
    TRandom rng;
    double d_n;     // number of detectors per square kilometer
    double d_size;  // array size, in kilometers
@@ -19,15 +19,33 @@ public:
    // if fix_theta >= 0 then generates MC at that fixed theta value
    void generate(double E, int verbose=VERBOSE, double fix_theta=-1.0);
 
+   // probability for noise alone to produce k hits, set to exactly zero below min probability
+   double prob_noise(int k, double min = 1E-50);
 
+   // log of the probability for noise alone to produce k hits
+   double log_prob_noise(int k);
+
+   // generate an event with only noise.
+   void noise(int verbose=VERBOSE);
    //
-   // generate a noise event, flat in the number of phones with a hit,
-   // with variable wgt set uppropriately.
+   // generate a noise event, k flat in [kmin,kmax] (the number of noise hits),
+   // with member variable wgt set to prob(k) / pmax
+   // NOTE:  call optimize_weighted_noise before first call with new parameters!
    double wgt;
+   int kmin, kmax;
+   double pmax;
    void weighted_noise(int verbose=VERBOSE);
+
+   // find values of kmin and kmax that cover probabilities greater than pmin:
+   // record highest proability pmax...
+   void optimize_weighted_noise(double pmin, int verbose=VERBOSE);
 
    // print
    void print();
+
+ private:
+   void init_shower_fcn();
+
 };
 
 #endif

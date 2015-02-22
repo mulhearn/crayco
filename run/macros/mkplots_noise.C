@@ -1,4 +1,14 @@
 
+void nhits_plots();
+void ereco_plots();
+
+
+mkplots_noise(){
+  nhits_plots();
+  ereco_plots();
+}
+
+
 
 TGraph * add_hist(TFile * f, const char * tagn, const char * tags, int color, double scale_s, double scale_n){
    TH1F * hs = f->Get(tags);
@@ -37,14 +47,13 @@ TGraph * add_hist(TFile * f, const char * tagn, const char * tags, int color, do
    return gn;
 }
 
-
-void mkplots_noise(){
+void ereco_plots(){
    gStyle->SetOptStat(0);
 
    TFile * f = new TFile("noise.root");
    f->ls();
 
-   TLegend *leg = new TLegend(0.1,0.6,0.60, 0.85);
+   TLegend *leg = new TLegend(0.5,0.6,0.85, 0.85);
    leg->SetFillStyle(0);
    leg->SetBorderSize(0);
 
@@ -55,7 +64,7 @@ void mkplots_noise(){
    c1->SetBottomMargin(0.13);
    TH1F * hframe = new TH1F("hframe", "", 10, 1E18, 1E22);
 
-   hframe->SetMaximum(10.0);  
+   hframe->SetMaximum(0.01);  
    hframe->SetMinimum(0.0000000001);  
    hframe->SetXTitle("Reconstructed Energy [eV]");
    hframe->SetYTitle("Rate [Hz / km^2]");
@@ -68,13 +77,14 @@ void mkplots_noise(){
    hframe->Draw();
    double peryrHz = 3.17E-8;
    double N_n = 1000;
-   double N_s = 100;
+   double N_s = 1000;
    double scale_n = 0.5 / N_n;
    double scale_s = peryrHz / N_s; // 10^19 eV
    //double scale_s = 1E-3 *  peryrHz / N; // 10^20 eV
 
-   leg->AddEntry(add_hist(f, "h_02_noise", "h_02_signal", 1, scale_s, scale_n), "rate=0.02", "l");
-   leg->AddEntry(add_hist(f, "h_2_noise", "h_2_signal", 2, scale_s, scale_n), "rate=0.2", "l");
+   leg->AddEntry(add_hist(f, "h_02_noise_ereco_pass", "h_02_signal_ereco_pass", 4, scale_s, scale_n), "rate=0.02", "l");
+   //leg->AddEntry(add_hist(f, "h_2_noise_ereco_pass", "h_2_signal_ereco_pass", 2, scale_s, scale_n), "rate=0.2", "l");
+   
    hframe->Draw("SAME");
 
    TH1F * hdummy1 = new TH1F("hdummy1", "", 100, 0.0, 1.0);
@@ -88,4 +98,41 @@ void mkplots_noise(){
 
    c1->SaveAs("plots/noise.png");
    c1->SaveAs("plots/noise.eps");
+}
+
+void nhits_plots(){
+   gStyle->SetOptStat(0);
+
+   TFile * f = new TFile("noise.root");
+   f->ls();
+
+  TH1F * h = new TH1F("hframe", "", 100, 0., 300.0);
+  h->SetMinimum(1E-15);
+  h->SetMaximum(h_02_noise_nhits_unwgt->GetMaximum()*1.5);
+
+  TCanvas * c = new TCanvas();
+  c.SetLogy();
+
+  h->SetXTitle("Number of Hits");
+  h->Draw();
+
+  TGraph * ga = f->Get("g_02_noise_nhits");
+  TGraph * gb = f->Get("g_2_noise_nhits");
+  ga->SetLineColor(2);
+  gb->SetLineColor(4);
+  ga->Draw("SAME");
+  gb->Draw("SAME");
+
+
+
+  TH1F * ha = f->Get("h_02_noise_nhits_unwgt");
+  TH1F * hb = f->Get("h_2_noise_nhits_unwgt");
+  TH1F * hc = f->Get("h_02_noise_nhits_wgt");
+  TH1F * hd = f->Get("h_2_noise_nhits_wgt");
+  ha->SetMarkerStyle(4);
+  hb->SetMarkerStyle(4);
+  ha->Draw("EPSAME");  
+  hb->Draw("EPSAME");
+  hc->Draw("EPSAME");  
+  hd->Draw("EPSAME");
 }
