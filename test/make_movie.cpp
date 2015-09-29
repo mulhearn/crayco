@@ -12,6 +12,7 @@
 #include "TRandom.h"
 #include "TCanvas.h"
 #include <iomanip>
+#include <fstream>
 
 #include "TMinuit.h"
 #include <Math/ProbFuncMathCore.h>
@@ -23,7 +24,7 @@
 
 using namespace std;
 
-double mean_hits(shower_mc & mc, int nruns, double E){
+void save_hits(shower_mc & mc, int nruns, double E){
    calc_stats hits;
    shower_fcn & sfcn = shower_fcn::instance();
 
@@ -31,23 +32,17 @@ double mean_hits(shower_mc & mc, int nruns, double E){
 
    for (int i=0; i<nruns; i++){
      mc.generate(E, QUIET, 0.0);  // fix theta=0
-     //mc.generate(E, QUIET);
-      double nhits = sfcn.count_hits(1);
-      if (nhits >= 5) npass++;
-      //cout << "INFO:  number of hits:  " << nhits << "\n";
-      hits.add(nhits);
+     char name[200];
+     sprintf(name,"movie/frame%d.txt",i);
+     cout << "INFO: outputting to " << name << "\n";
+     ofstream output(name);
+     int n = sfcn.d_x.size();
+     for (int i=0; i<n; i++){
+       output << sfcn.d_x[i] << " " << sfcn.d_y[i] << " " << sfcn.d_h[i] << "\n";
+     }
+     output.close();
+
    }
-   double eff = 100.0 * (double) npass / (double) nruns;
-   
-   //cout << "INFO: E:  " << E << " " << 9.0 + log(E)/log(10.0) << " phone hits mean:  " << hits.mean() << " +/- " << hits.unc() << " rms: " << hits.rms() << "\n";
-   cout << "INFO: E:  " << E << " eV  phone hits mean:  " << hits.mean() << " +/- " << hits.unc() << " rms: " << hits.rms() << " eff: " << eff << "\n";
-   cout << "INFO: eff/dense:  " << eff / mc.d_n << "\n";
-
-
-
-
-
-   return hits.mean();
 }
 
 int main(int argc, char * argv[]){   
@@ -56,15 +51,15 @@ int main(int argc, char * argv[]){
    shower_fcn & sfcn = shower_fcn::instance();
 
    mc.d_flat     = 0.0;
-   mc.d_size     = 1.0;
-   mc.d_n = 1000;
+   mc.d_size     = 0.5;
+   mc.d_n = 500;
    mc.d_xs_gamma          = 0.0; 
    mc.d_xs_mu             = 0.0; 
 
    char fname[200];
    if (argc < 6) { 
-     cout << "usage:  mean_hits <nruns> <n> <xs_gamma> <xs_mu> <flat>\n";
-     cout << "eg: mean_hits 10 1000 0.0 1E-5 0.02\n";
+     cout << "usage:  make_movie <nruns> <n> <xs_gamma> <xs_mu> <flat>\n";
+     cout << "eg: make_movie 10 1000 1E-9 1E-5 0.02\n";
      return 0; 
    }
    int nruns     = atoi(argv[1]);
@@ -74,13 +69,18 @@ int main(int argc, char * argv[]){
    mc.d_flat     = atof(argv[5]);
 
    mc.print();   
-   mean_hits(mc, nruns, 1E18);
-   mean_hits(mc, nruns, 5E18);
-   mean_hits(mc, nruns, 1E19);
-   mean_hits(mc, nruns, 5E19);
-   mean_hits(mc, nruns, 1E20);
-   mean_hits(mc, nruns, 5E20);
+   //cout << "Energy scan:\n";
+   //cout << "ngamma:  " << exp(logn_gamma (log(1.07E11))) << "\n";
+   //cout << "nmu:     " << exp(logn_mu (log(1.07E11))) << "\n";
 
+   
+   //save_hits(mc, nruns, 1E7);
+   //save_hits(mc, nruns, 1E8);
+   //save_hits(mc, nruns, 1E9);
+   //save_hits(mc, nruns, 1E10);
+   //save_hits(mc, nruns, 1E11);
+
+   save_hits(mc, nruns, 1E12);
 }
    
 

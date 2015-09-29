@@ -49,7 +49,6 @@ public:
 
    // histogram filling (leaks memory as currently written...)
    void fill_histograms(double E);
-   void noise_study(double E, const char * htag);  // fill histograms for noise study...
    TH1F * hereco;
    TH1F * hfereco;
 
@@ -235,34 +234,6 @@ void mcarray::fill_histograms(double E){
       }
    }
 }
-
-void mcarray::noise_study(double E, const char * htag){
-   cout << "Energy of Generated Shower:  " << E << "\n";
-
-   hereco      = new TH1F(htag,"",80, 9.0, 13.0);
-   shower_fcn & sfcn = shower_fcn::instance();
-   int n = 1000;
-   for (int i=0; i<n; i++){
-      if (i%100 == 0) cout << i << "\n";
-      generate(E, QUIET, 0.0);
-      //cout << "actual generated s_loge:  " << sfcn.gen_s_loge << "\n";
-      sfcn.gen_s_loge = 10.0;
-      //sfcn.d_flat     = 0.0; 
-      if (shower_fit(QUIET)){
-         //cout << "fitted s_loge:  " << sfcn.fit_s_loge << "\n";
-         //cout << "uncertainty s_loge:  " << sfcn.unc_s_loge << "\n";
-         double e_fit = exp(sfcn.fit_s_loge);
-         double sig = sfcn.fit_s_loge / sfcn.unc_s_loge;
-
-         if (sig > 100.0) {
-	   //cout << "logn significance:  " << sig << "\n";
-	   //cout << "fitted energy:  " << e_fit << "\n";
-            hereco->Fill(log(e_fit) / log(10.0));
-         }
-      }
-   }
-}
-
 void mcarray::shower_histograms(){
    shower_fcn & sfcn = shower_fcn::instance();
    double log10_emin = 19.0;
@@ -301,233 +272,67 @@ void mcarray::shower_histograms(){
 }
 
 
-int main(int argc, char * argv[]){   
-
-
+int main(int argc, char * argv[]){
    mcarray array;
    array.rng.SetSeed(0);
    shower_fcn & sfcn = shower_fcn::instance();
 
    char fname[200];
 
-   //array.d_n        = 10; 
-   //array.d_size     = 1.0;
-   //array.d_xs_gamma       = 1E-9; 
-   //1E-9 to 1E-7
+   if (argc < 4) { 
+     cout << "USAGE:  <tag> d_n nruns \n";
+     return 0;
+   }
 
-
-   //array.emain      = 1E21;
-   //array.escale     = 10.0;
-   
-   if (argc < 3) { return 0; }
-   array.d_n = atoi(argv[1]);
-   int nruns = atoi(argv[2]);
+   const char * tag = argv[1];
+   array.d_n = atoi(argv[2]);
+   int nruns = atoi(argv[3]);
+   cout << "INFO:  root file output with tag:  " << tag << "\n";
    cout << "INFO:  command line argument d_n = " << array.d_n << "\n";
    cout << "INFO:  command line argument nrums = " << nruns << "\n";
 
+
    array.d_size = 1.0;
-   sprintf(fname, "resplots_%i.root", int(array.d_n));
+
    
-   //array.print();
-   //array.d_xs_gamma       = 1E-9; 
-   //cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   //array.mean_hits(1E7);
-   //array.mean_hits(1E8);
-   //array.mean_hits(1E9);
-   //array.mean_hits(1E10);
-   //array.mean_hits(1E11);
-   //array.mean_hits(1E12);
-
-   //array.d_xs_gamma       = 1E-8; 
-   //cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   //array.mean_hits(1E7);
-   //array.mean_hits(1E8);
-   //array.mean_hits(1E9);
-   //array.mean_hits(1E10);
-   //array.mean_hits(1E11);
-   //array.mean_hits(1E12);
-
-   vector<double> _erms7, _trms7, _prms7, _eunc7, _tunc7, _punc7;
-   vector<double> _erms8, _trms8, _prms8, _eunc8, _tunc8, _punc8;
-   vector<double> _erms9, _trms9, _prms9, _eunc9, _tunc9, _punc9;
-   vector<double> _pen, _pen7, _pen8, _pen9; 
-   vector<double> _meannhits7, _meannhits8, _meannhits9;
+   vector<double> _erms, _trms, _prms, _eunc, _tunc, _punc, _pen, _meannhits;
    int runs = 0;
-   int runs7 = 0;
-   int runs8 = 0;
-   int runs9 = 0;
-   
-   array.d_xs_mu   = 0.0; 
-   array.d_xs_gamma  = 1E-7; 
-   cout << "Energy scan for d_xs = " << array.d_xs_gamma << "\n";
-   cout << "Energy scan for d_xs_mu = " << array.d_xs_mu << "\n";
-   for (double e=1E7; e<=1E12; e *= 2.0){
-      _pen.push_back(e*1E9);
-      runs += 1;
-      double mhits = array.mean_hits(e);
-      _meannhits7.push_back(mhits);
-      if (mhits > 5.0){
-         //array.resolutions(nruns, e, _erms7, _eunc7, _trms7, _tunc7, _prms7, _punc7);
-         _pen7.push_back(e*1E9);
-         runs7 += 1;
-      }
-   }
-   //for (int i=0; i<_erms7.size(); i++){
-   //  _eunc7.push_back(_erms7[i] / sqrt(runs7));
-   //}
-   cout << _erms7.size() << " " <<  _eunc7.size() << " " << _pen7.size() << " " << runs7 << endl;
 
-   array.d_xs_gamma       = 5E-9; 
-   array.d_xs_mu          = 5E-5; 
-   cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   cout << "Energy scan for d_xs_mu = " << array.d_xs_mu << "\n";
-   for (double e=1E7; e<=1E12; e *= 2.0){
-      double mhits = array.mean_hits(e);
-      _meannhits8.push_back(mhits);
-      if (mhits > 5.0){
-         array.resolutions(nruns, e, _erms8, _eunc8, _trms8, _tunc8, _prms8, _punc8);
-         _pen8.push_back(e*1E9);
-         runs8 += 1;
-      }
-   }
-   //for (int i=0; i<_erms8.size(); i++){
-   //  _eunc8.push_back(_erms8[i] / sqrt(runs8));
-   //}
-   cout << _erms8.size() << " " <<  _eunc8.size() << " " << _pen8.size() << " " << runs8 << endl;
-
-   array.d_xs_gamma          = 1E-9; 
+   array.d_xs_gamma          = 0; 
    array.d_xs_mu             = 1E-5; 
+
+   sprintf(fname, "resolution_%s.root", tag);
    cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
    cout << "Energy scan for d_xs_mu = " << array.d_xs_mu << "\n";
    for (double e=1E7; e<=1E12; e *= 2.0){
       double mhits = array.mean_hits(e);
-      _meannhits9.push_back(mhits);
+      _meannhits.push_back(mhits);
       if (mhits > 5.0){
-         array.resolutions(nruns, e, _erms9, _eunc9, _trms9, _tunc9, _prms9, _punc9);
-         _pen9.push_back(e*1E9);
-         runs9 += 1;
+         array.resolutions(nruns, e, _erms, _eunc, _trms, _tunc, _prms, _punc);
+         _pen.push_back(e*1E9);
+         runs += 1;
       }
    }
-   //for (int i=0; i<_erms9.size(); i++){
-   //  _eunc9.push_back(_erms9[i] / sqrt(runs9));
-   //}
-   cout << _erms9.size() << " " <<  _eunc9.size() << " " << _pen9.size() << " " << runs9 << endl;
+   cout << _erms.size() << " " <<  _eunc.size() << " " << _pen.size() << " " << runs << endl;
  
-   TGraphErrors *geres_err7 = new TGraphErrors(runs7, &_pen7[0], &_erms7[0], NULL, &_eunc7[0]);
-   TGraphErrors *gtres_err7 = new TGraphErrors(runs7, &_pen7[0], &_trms7[0], NULL, &_eunc7[0]);
-   TGraphErrors *gpres_err7 = new TGraphErrors(runs7, &_pen7[0], &_prms7[0], NULL, &_eunc7[0]);
-   TGraphErrors *gnhits_pen7 = new TGraphErrors(runs, &_pen[0], &_meannhits7[0], NULL, NULL);
-   TGraphErrors *geres_err8 = new TGraphErrors(runs8, &_pen8[0], &_erms8[0], NULL, &_eunc8[0]);
-   TGraphErrors *gtres_err8 = new TGraphErrors(runs8, &_pen8[0], &_trms8[0], NULL, &_eunc8[0]);
-   TGraphErrors *gpres_err8 = new TGraphErrors(runs8, &_pen8[0], &_prms8[0], NULL, &_eunc8[0]);
-   TGraphErrors *gnhits_pen8 = new TGraphErrors(runs, &_pen[0], &_meannhits8[0], NULL, NULL);
-   TGraphErrors *geres_err9 = new TGraphErrors(runs9, &_pen9[0], &_erms9[0], NULL, &_eunc9[0]);
-   TGraphErrors *gtres_err9 = new TGraphErrors(runs9, &_pen9[0], &_trms9[0], NULL, &_eunc9[0]);
-   TGraphErrors *gpres_err9 = new TGraphErrors(runs9, &_pen9[0], &_prms9[0], NULL, &_eunc9[0]);
-   TGraphErrors *gnhits_pen9 = new TGraphErrors(runs, &_pen[0], &_meannhits9[0], NULL, NULL);
+   TGraphErrors *geres_err = new TGraphErrors(runs, &_pen[0], &_erms[0], NULL, &_eunc[0]);
+   TGraphErrors *gtres_err = new TGraphErrors(runs, &_pen[0], &_trms[0], NULL, &_tunc[0]);
+   TGraphErrors *gpres_err = new TGraphErrors(runs, &_pen[0], &_prms[0], NULL, &_punc[0]);
+   TGraphErrors *gnhits_pen = new TGraphErrors(runs, &_pen[0], &_meannhits[0], NULL, NULL);
    
    TFile f(fname, "RECREATE");
    f.cd();
-   geres_err7->SetName("eres7");
-   gtres_err7->SetName("tres7");
-   gpres_err7->SetName("pres7");
-   gnhits_pen7->SetName("meanNhits7");
-   geres_err7->Write();
-   gtres_err7->Write();
-   gpres_err7->Write();
-   gnhits_pen7->Write();
-   geres_err8->SetName("eres8");
-   gtres_err8->SetName("tres8");
-   gpres_err8->SetName("pres8");
-   gnhits_pen8->SetName("meanNhits8");
-   geres_err8->Write();
-   gtres_err8->Write();
-   gpres_err8->Write();
-   gnhits_pen8->Write();
-   geres_err9->SetName("eres9");
-   gtres_err9->SetName("tres9");
-   gpres_err9->SetName("pres9");
-   gnhits_pen9->SetName("meanNhits9");
-   geres_err9->Write();
-   gtres_err9->Write();
-   gpres_err9->Write();
-   gnhits_pen9->Write();
+   geres_err->SetName("eres");
+   gtres_err->SetName("tres");
+   gpres_err->SetName("pres");
+   gnhits_pen->SetName("meanNhits");
+   geres_err->Write();
+   gtres_err->Write();
+   gpres_err->Write();
+   gnhits_pen->Write();
    f.Close();
 
-
-   //generate_pulls(rng);
    return 0;
 }
 
 
-int main_v2(){   
-   int nruns = 20;
-   mcarray array;
-   array.rng.SetSeed(2014);
-   shower_fcn & sfcn = shower_fcn::instance();
-
-   array.d_flat     = 0.0;
-   array.d_size     = 1.0;
-   array.d_n = 1000;
-   array.d_xs_gamma       = 1E-7; 
-   array.d_xs_mu          = 0.0; 
-   array.print();   
-
-   TFile fout("noise.root", "RECREATE");
-   fout.cd();
-
-   array.d_flat     = 0.01;
-   array.noise_study(1.0, "h_01_noise");
-   array.hereco->Write();
-   array.noise_study(1E12, "h_01_signal");
-   array.hereco->Write();
-
-   array.d_flat     = 0.05;
-   array.noise_study(1.0, "h_05_noise");
-   array.hereco->Write();
-   array.noise_study(1E12, "h_05_signal");
-   array.hereco->Write();
-
-   array.d_flat     = 0.1;
-   array.noise_study(1.0, "h_1_noise");
-   array.hereco->Write();
-   array.noise_study(1E12, "h_1_signal");
-   array.hereco->Write();
-
-
-   fout.Close();
-
-   return 0;
-
-   array.d_xs_gamma       = 1E-7; 
-   cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   for (double e=1E7; e<=1E12; e *= 2.0){
-      double mhits = array.mean_hits(e);
-      if (mhits > 10.0){
-         //array.resolutions(nruns, e);
-      }
-   }
-
-   array.d_xs_gamma       = 1E-8; 
-   cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   for (double e=1E7; e<=1E12; e *= 2.0){
-      double mhits = array.mean_hits(e);
-      if (mhits > 10.0){
-         //array.resolutions(nruns, e);
-      }
-   }
-
-   array.d_xs_gamma       = 1E-9; 
-   cout << "Energy scan for d_xs_gamma = " << array.d_xs_gamma << "\n";
-   for (double e=1E7; e<=1E12; e *= 2.0){
-      double mhits = array.mean_hits(e);
-      if (mhits > 10.0){
-         //array.resolutions(nruns, e);
-      }
-   }
-
-
-
-
-   return 0;
-}

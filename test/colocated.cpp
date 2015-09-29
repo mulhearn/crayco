@@ -56,8 +56,8 @@ int main(int argc, char * argv[]){
    shower_fcn & sfcn = shower_fcn::instance();
 
    mc.d_flat     = 0.0;
-   mc.d_size     = 1.0;
-   mc.d_n = 1000;
+   mc.d_size     = 0.01;
+   mc.d_n = 3;
    mc.d_xs_gamma          = 0.0; 
    mc.d_xs_mu             = 0.0; 
 

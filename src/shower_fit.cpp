@@ -32,12 +32,25 @@ shower_fcn & shower_fcn::instance(){
   return x;
 }
 
-double shower_fcn::count_hits(){
+double shower_fcn::count_hits(int nmin){
   double count_hits = 0;
   for (int i=0; i<d_x.size(); i++){
-    if (d_h[i] > 0.0){ 
+    if (d_h[i] >= nmin){ 
       count_hits+=1.0;
     }  
+  }
+  return count_hits;
+}
+
+
+double shower_fcn::count_hits_core(double r){
+  double r2 = r*r;
+  double count_hits = 0;
+  for (int i=0; i<d_x.size(); i++){
+    if (d_h[i] == 0) continue;
+    double d_r2 = d_x[i]*d_x[i] + d_y[i]*d_y[i];
+    if (d_r2 > r2) continue;
+    count_hits+=1.0;
   }
   return count_hits;
 }
@@ -75,6 +88,23 @@ double shower_fcn::calc_fcn(double * par){
   return -2.0*logl;
 }
 
+
+double shower_fcn::noise_only_fcn(){
+  double logl = 0;
+  
+  for (int i=0; i<d_x.size();i++){
+    double mu = fabs(d_flat);
+    double p0 = exp(-mu);  
+    double p1 = 1.0 - p0;
+    //cout << "mu:  " << mu << "\n";
+    //cout << "p0:  " << p0 << "\n";
+    //cout << "p1:  " << p1 << "\n";    
+    if (d_h[i]) logl += log(p1);
+    else        logl += log(p0);
+  }
+  return -2.0*logl;
+}
+
 int shower_fit(int verbose){
   shower_fcn & sfcn = shower_fcn::instance();
   double count_hits = sfcn.count_hits();
@@ -88,9 +118,9 @@ int shower_fit(int verbose){
   // experimental, to remove bias:
   //count_hits = count_hits - sfcn.d_x.size() * sfcn.d_flat;
 
-  if (count_hits < 5){
-     return 0;
-  }
+  //if (count_hits < 2){
+  //return 0;
+  //}
   if (fhit > 0.90){
      return 0;
   }
@@ -118,15 +148,15 @@ int shower_fit(int verbose){
   Double_t vstart[] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi, sfcn.d_flat};  
   
   //static Double_t vstart[3] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi};  
-  Double_t step[]   = {100.0, 0.1, 0.1, 0.0};
+  Double_t step[]   = {10.0, 0.1, 0.1, 0.0};
   gMinuit->mnparm(0, "s_loge",       vstart[0], step[0], 0, 0, ierflg);
-  gMinuit->mnparm(1, "s_sin2theta",  vstart[1], step[1], 0, 0, ierflg);
+  gMinuit->mnparm(1, "s_sin2theta",  vstart[1], step[1], 0, 1.0, ierflg);
   gMinuit->mnparm(2, "s_phi",        vstart[2], step[2], 0, 0, ierflg);
   gMinuit->mnparm(3, "flat",         vstart[3], step[3], 0, 0, ierflg);
 
   //gMinuit->FixParameter(0);
-  //gMinuit->FixParameter(1);
-  //gMinuit->FixParameter(2);
+  gMinuit->FixParameter(1);
+  gMinuit->FixParameter(2);
   gMinuit->FixParameter(3);
   
   // Now ready for minimization step
@@ -135,15 +165,20 @@ int shower_fit(int verbose){
   arglist[0] = 10000;
   arglist[1] = 1.;
   gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
-  //cout << "Minuit Status after MIGRAD:  " << gMinuit->GetStatus() << "\n";
+  if (gMinuit->GetStatus() != 0){
+    cout << "WARNING:  Minuit Status after MIGRAD:  " << gMinuit->GetStatus() << "\n";
+  }
 
   //gMinuit->Release(1);
   //gMinuit->Release(2);
   //gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
-    
+  //cout << "Minuit Status after MIGRAD:  " << gMinuit->GetStatus() << "\n";
+
   gMinuit->GetParameter(0, sfcn.fit_s_loge, sfcn.unc_s_loge);
   gMinuit->GetParameter(1, sfcn.fit_s_sin2theta, sfcn.unc_s_sin2theta);
   gMinuit->GetParameter(2, sfcn.fit_s_phi, sfcn.unc_s_phi);
+  gMinuit->mnstat(sfcn.fmin, sfcn.fedm, sfcn.errdef, sfcn.npari, sfcn.nparx, sfcn.istat);
+
 
   if (verbose == VERBOSE){
      cout << "generated logn:       " << setw(12) << sfcn.gen_s_loge << " ";
@@ -151,7 +186,21 @@ int shower_fit(int verbose){
      cout << "generated sin2 theta:  " << setw(12) << sfcn.gen_s_sin2theta << " ";
      cout << "fitted value:         " << setw(12) << sfcn.fit_s_sin2theta << " +/- " << sfcn.unc_s_sin2theta << "\n";
      cout << "generated phi:        " << setw(12) << sfcn.gen_s_phi << " ";
-     cout << "fitted value:         " << setw(12) << sfcn.fit_s_phi << " +/- " << sfcn.unc_s_phi << "\n";  
+     cout << "fitted value:         " << setw(12) << sfcn.fit_s_phi << " +/- " << sfcn.unc_s_phi << "\n";
+     cout << "fmin:                 " << setw(12) << sfcn.fmin << "\n";
+     cout << "fedm:                 " << setw(12) << sfcn.fedm << "\n";
+     cout << "errdef:               " << setw(12) << sfcn.errdef << "\n";
+     cout << "istat:                " << setw(12) << sfcn.istat << "\n";
+  }
+  if (sfcn.istat != 3){
+    static int warn_count = 0;
+    warn_count++;
+    if (warn_count < 5){
+      cout << "WARNING:  Minuit fit returns istat: " << setw(12) << sfcn.istat << "\n";
+    } else if (warn_count == 5){
+      cout << "WARNING:  Supressing further warnings regarding istat...\n";
+    }
+
   }
 
   delete gMinuit;

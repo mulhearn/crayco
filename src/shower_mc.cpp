@@ -36,7 +36,7 @@ void shower_mc::print(){
 
 void shower_mc::init_shower_fcn(){
   shower_fcn & sfcn = shower_fcn::instance();
-  wgt = 1.0; // this function produces  unweighted events
+  //wgt = 1.0; // this function produces  unweighted events
   sfcn.d_x.clear();
   sfcn.d_y.clear();
   sfcn.d_h.clear();
@@ -51,7 +51,7 @@ void shower_mc::init_shower_fcn(){
 void shower_mc::generate(double s_loge, double s_sin2theta, double s_phi, int verbose){ 
    const double norm = 1.0 / sqrt(2 * M_PI);
    shower_fcn & sfcn = shower_fcn::instance();
-   wgt = 1.0; // this function produces  unweighted events
+   //wgt = 1.0; // this function produces  unweighted events
 
    init_shower_fcn();
    sfcn.gen_s_loge       = s_loge;
@@ -78,13 +78,16 @@ void shower_mc::generate(double s_loge, double s_sin2theta, double s_phi, int ve
    for (int i=0; i<tot_n; i++){
       double x = (-500.0 + rng.Uniform() * 1000) * d_size;
       double y = (-500.0 + rng.Uniform() * 1000) * d_size;
+      //x = 10.0;
+      //y = 0;
       double p = shower_pdf(x, y, s_sin2theta, s_phi);
       double mu = p * (exp(s_logn_gamma) * d_xs_gamma + exp(s_logn_mu) * d_xs_mu)+ d_flat;
       double p0 = ROOT::Math::poisson_cdf(0,mu);
       
       double hit = 0;
-      double xp = rng.Uniform();
-      if (xp > p0) hit = 1;
+      //double xp = rng.Uniform();
+      //if (xp > p0) hit = 1;
+      hit = rng.Poisson(mu);
 
       if (hit > 0.0) nhit+=1;
       sfcn.d_x.push_back(x);
@@ -102,7 +105,7 @@ void shower_mc::generate(double s_loge, double s_sin2theta, double s_phi, int ve
 void shower_mc::generate(double E, int verbose, double fix_sin2theta){
    shower_fcn & sfcn = shower_fcn::instance();
    double s_loge       = log(E);
-   wgt = 1.0;  // this function produces  unweighted events
+   //wgt = 1.0;  // this function produces  unweighted events
    //double s_sin2theta  = 0.75;   
    double s_sin2theta  = fix_sin2theta;
    if (s_sin2theta < 0.0)
@@ -230,3 +233,24 @@ void shower_mc::weighted_noise(int verbose){
   }
 }
 
+
+double shower_mc::weighted_shower_energy(double Emin, double Emax, double ngen, int verbose){
+  double NORM = 2*3.14 / 31536000;  // 2 pi / seconds per year -- convert flux to Hz
+  
+  double lmin = log(Emin);
+  double lrat = log(Emax/Emin);
+  
+  double l = lmin + lrat*rng.Uniform();
+  double E = exp(l);
+  
+  wgt = flux(E) * E * lrat / ngen * NORM;
+
+  if (verbose){
+    cout << "E shower:  " << E << "  wgt:  " << wgt << "\n";
+    cout << "flux:  " << flux(E) << "\n";
+    cout << "ngen:  " << ngen << "\n";
+    cout << "wgt:  " << wgt << "\n";
+  }
+  return E;
+
+}

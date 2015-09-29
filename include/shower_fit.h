@@ -13,8 +13,10 @@ class shower_fcn {
 public:
   // needed for TMinuit fcn interface
   static shower_fcn & instance();
-  double count_hits();
-  double calc_fcn(double * par);
+  double count_hits(int nmin=1);
+  double count_hits_core(double radius);
+  double calc_fcn(double * par);  // -2 log likelihood for shower with parameters <par>  
+  double noise_only_fcn(); // -2 log likehood for noise only, depends only on d_flat
 
   // detector data:
   std::vector<double> d_x;
@@ -38,6 +40,15 @@ public:
   double unc_s_loge;
   double unc_s_sin2theta;
   double unc_s_phi;
+
+  // Minuit fit status variables
+  double fmin;
+  double fedm;
+  double errdef;
+  int npari;
+  int nparx;
+  int    istat;
+
 
 private:
   shower_fcn(){}

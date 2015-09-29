@@ -1,3 +1,0 @@
-./bin/poisson_fit 500 1000
-./bin/poisson_fit 1000 1000
-./bin/poisson_fit 5000 100

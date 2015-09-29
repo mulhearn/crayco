@@ -40,6 +40,11 @@ class shower_mc {
    // record highest proability pmax...
    void optimize_weighted_noise(double pmin, int verbose=VERBOSE);
 
+
+
+   double weighted_shower_energy(double Emin, double Emax, double ngen, int verbose=VERBOSE);
+
+
    // print
    void print();
 
