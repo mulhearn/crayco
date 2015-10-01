@@ -13,6 +13,10 @@ class shower_fcn {
 public:
   // needed for TMinuit fcn interface
   static shower_fcn & instance();
+
+  int mode_fix_theta_phi;
+  int mode_fix_x_y;
+
   double count_hits(int nmin=1);
   double count_hits_core(double radius);
   double calc_fcn(double * par);  // -2 log likelihood for shower with parameters <par>  
@@ -32,16 +36,20 @@ public:
   double gen_s_loge;
   double gen_s_sin2theta;   
   double gen_s_phi;
-  double gen_s_x; // presently ignored in fit...
-  double gen_s_y; // presently ignored in fit...
+  double gen_s_x; 
+  double gen_s_y; 
 
   // fitted parameters:
   double fit_s_loge;
   double fit_s_sin2theta;
   double fit_s_phi;
+  double fit_s_x;
+  double fit_s_y;
   double unc_s_loge;
   double unc_s_sin2theta;
   double unc_s_phi;
+  double unc_s_x;
+  double unc_s_y;
 
   // Minuit fit status variables
   double fmin;
@@ -53,7 +61,7 @@ public:
 
 
 private:
-  shower_fcn(){}
+  shower_fcn();
 };
 
 // TMinuit fcn interface:

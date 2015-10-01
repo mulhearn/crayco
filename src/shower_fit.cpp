@@ -26,6 +26,10 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag){
   f = shower_fcn::instance().calc_fcn(par);
 }
 
+shower_fcn::shower_fcn(){
+  int mode_fix_theta_phi = 0;
+  int mode_fix_x_y = 0;
+}
 
 shower_fcn & shower_fcn::instance(){ 
   static shower_fcn x;
@@ -64,6 +68,9 @@ double shower_fcn::calc_fcn(double * par){
   double sin2theta = par[1];
   double phi       = par[2];
   double flat      = par[3];
+  double s_x       = par[4];
+  double s_y       = par[5];
+
   //cout << "theta:  " << theta << "\n";
   //cout << "phi:  " << phi << "\n";
   
@@ -72,7 +79,7 @@ double shower_fcn::calc_fcn(double * par){
   //logl = -x*x - y*y;
   
   for (int i=0; i<d_x.size();i++){
-    double p  = shower_pdf(d_x[i], d_y[i], sin2theta, phi);
+    double p  = shower_pdf(d_x[i]-s_x, d_y[i]-s_y, sin2theta, phi);
     double mu = (exp(s_logn_gamma) * d_xs_gamma + exp(s_logn_mu) * d_xs_mu)* p + fabs(flat);
     //double p0 = ROOT::Math::poisson_cdf(0,mu);
     double p0 = exp(-mu);  // equivalent to above...
@@ -107,6 +114,7 @@ double shower_fcn::noise_only_fcn(){
 
 int shower_fit(int verbose){
   shower_fcn & sfcn = shower_fcn::instance();
+
   double count_hits = sfcn.count_hits();
   double fhit = count_hits / sfcn.d_x.size();
   if (verbose == VERBOSE){
@@ -145,40 +153,55 @@ int shower_fit(int verbose){
 
   // this is a bit of cheat, but we should be able to get rough estimate before fit:
   // for now these are set near, but not identical to, the correct values...
-  Double_t vstart[] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi, sfcn.d_flat};  
+  Double_t vstart[] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi, sfcn.d_flat, sfcn.gen_s_x, sfcn.gen_s_y};  
   
   //static Double_t vstart[3] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi};  
-  Double_t step[]   = {10.0, 0.1, 0.1, 0.0};
+  Double_t step[]   = {10.0, 0.1, 0.1, 0.0, 10.0, 10.0};
   gMinuit->mnparm(0, "s_loge",       vstart[0], step[0], 0, 0, ierflg);
   gMinuit->mnparm(1, "s_sin2theta",  vstart[1], step[1], 0, 1.0, ierflg);
   gMinuit->mnparm(2, "s_phi",        vstart[2], step[2], 0, 0, ierflg);
   gMinuit->mnparm(3, "flat",         vstart[3], step[3], 0, 0, ierflg);
+  gMinuit->mnparm(4, "s_x",          vstart[4], step[4], 0, 0, ierflg);
+  gMinuit->mnparm(5, "s_y",          vstart[5], step[5], 0, 0, ierflg);
 
   //gMinuit->FixParameter(0);
   gMinuit->FixParameter(1);
   gMinuit->FixParameter(2);
   gMinuit->FixParameter(3);
+  gMinuit->FixParameter(4);
+  gMinuit->FixParameter(5);
   
   // Now ready for minimization step
-
 
   arglist[0] = 10000;
   arglist[1] = 1.;
   gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
   if (gMinuit->GetStatus() != 0){
-    cout << "WARNING:  Minuit Status after MIGRAD:  " << gMinuit->GetStatus() << "\n";
+    cout << "WARNING:  Minuit Status after MIGRAD (step 1):  " << gMinuit->GetStatus() << "\n";
   }
 
-  //gMinuit->Release(1);
-  //gMinuit->Release(2);
-  //gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
-  //cout << "Minuit Status after MIGRAD:  " << gMinuit->GetStatus() << "\n";
+  if (!sfcn.mode_fix_theta_phi){
+    gMinuit->Release(1);
+    gMinuit->Release(2);
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 2):  " << gMinuit->GetStatus() << "\n";
+    }
+  }
+
+  if (!sfcn.mode_fix_x_y){
+    gMinuit->Release(4);
+    gMinuit->Release(5);
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 3):  " << gMinuit->GetStatus() << "\n";
+    } 
+  }
 
   gMinuit->GetParameter(0, sfcn.fit_s_loge, sfcn.unc_s_loge);
   gMinuit->GetParameter(1, sfcn.fit_s_sin2theta, sfcn.unc_s_sin2theta);
   gMinuit->GetParameter(2, sfcn.fit_s_phi, sfcn.unc_s_phi);
   gMinuit->mnstat(sfcn.fmin, sfcn.fedm, sfcn.errdef, sfcn.npari, sfcn.nparx, sfcn.istat);
-
 
   if (verbose == VERBOSE){
      cout << "generated logn:       " << setw(12) << sfcn.gen_s_loge << " ";
