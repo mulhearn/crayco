@@ -32,6 +32,8 @@ public:
   double gen_s_loge;
   double gen_s_sin2theta;   
   double gen_s_phi;
+  double gen_s_x; // presently ignored in fit...
+  double gen_s_y; // presently ignored in fit...
 
   // fitted parameters:
   double fit_s_loge;

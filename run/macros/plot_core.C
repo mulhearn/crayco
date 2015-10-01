@@ -1,6 +1,3 @@
-
-
-
 {  
   gStyle->SetOptStat(0);
   TCanvas c;

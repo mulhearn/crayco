@@ -64,7 +64,7 @@ int main(int argc, char * argv[]){
    char fname[200];
    if (argc < 6) { 
      cout << "usage:  mean_hits <nruns> <n> <xs_gamma> <xs_mu> <flat>\n";
-     cout << "eg: mean_hits 10 1000 0.0 1E-5 0.02\n";
+     cout << "eg: mean_hits 0 10 1000 0.0 1E-5 0.02\n";
      return 0; 
    }
    int nruns     = atoi(argv[1]);
