@@ -14,8 +14,9 @@ public:
   // needed for TMinuit fcn interface
   static shower_fcn & instance();
 
-  int mode_fix_theta_phi;
-  int mode_fix_x_y;
+  int mode_cheat; // use generator values for starting point
+  int mode_fix_theta_phi; // don't fit theta and phi
+  int mode_fix_x_y; // don't fit the starting position
 
   double count_hits(int nmin=1);
   double count_hits_core(double radius);
@@ -27,17 +28,27 @@ public:
   std::vector<double> d_y;
   std::vector<int>    d_h;
 
-  //fixed parameters (for now)
+  //fixed parameters:
   double d_xs_gamma;
   double d_xs_mu;
   double d_flat;
+  double d_size;
   
   // parameters used for generating shower data:
-  double gen_s_loge;
+  double gen_s_loge;	  
   double gen_s_sin2theta;   
-  double gen_s_phi;
-  double gen_s_x; 
-  double gen_s_y; 
+  double gen_s_phi;	  
+  double gen_s_x; 	  
+  double gen_s_y;         
+
+  // parameters used for generating shower data:
+  double start_s_loge;
+  double start_s_sin2theta;   
+  double start_s_phi;
+  double start_s_x; 
+  double start_s_y; 
+  void cheat(); // copy generator values to the fit starting values.
+  void estimate(); // estimate or guess the starting values, for grid of size d_size in km
 
   // fitted parameters:
   double fit_s_loge;

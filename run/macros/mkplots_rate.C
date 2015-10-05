@@ -3,120 +3,89 @@ void do_ereco();
 
 void mkplots_rate(){
   //do_nhits();
-  do_ereco();
+  plot_var("nhit", 12, 0.0, 12.0, "1");
+  plot_var("nhit", 50, 0.0, 100.0, "1");
+  //plot_var("mcore", 50, 0.0, 100.0, "1");
+  //plot_var("llr", 50, 0.0, 1.0, "1");
+  //plot_var("ereco", 50, 18.0, 22.0, "(llr>0.07)");
+  plot_var("eshower", 50, 0.0, 25.0, "(nhit>7)");
 }
 
-
-void do_nhits(){
+void plot_var(const char * var, double nbin, double xmin, double xmax, const char * cuts){
   gStyle->SetOptStat(0);
-  int MAXHITS = 50;
-  //int MAXHITS = 10;
   TCanvas * c = new TCanvas();
-  TH1F * hframe = new TH1F("hframe", "", MAXHITS, 0., MAXHITS);
 
-  TH1F * h1 = new TH1F("h1", "", MAXHITS, 0., MAXHITS);
-  TH1F * h2 = new TH1F("h2", "", MAXHITS, 0., MAXHITS);
-  TH1F * h3 = new TH1F("h3", "", MAXHITS, 0., MAXHITS);
-  TH1F * h4 = new TH1F("h4", "", MAXHITS, 0., MAXHITS);
+  //double emin = 18.0;
+  //double emax = 22.0;
+  //int nbin = 50;
+  TH1F * hframe = new TH1F("hframe", "", nbin, xmin, xmax);
+  TH1F * h0 = new TH1F("h0", "", nbin, xmin, xmax);
+  TH1F * h1 = new TH1F("h1", "", nbin, xmin, xmax);
+  TH1F * h2 = new TH1F("h2", "", nbin, xmin, xmax);
+  TH1F * h3 = new TH1F("h3", "", nbin, xmin, xmax);
+  h0->Sumw2();
   h1->Sumw2();
   h2->Sumw2();
   h3->Sumw2();
-  h4->Sumw2();
 
 
   c->SetLogy();
   
-
-
-
   _file0->ls();
   TTree * rate = _file0->Get("rate");
   rate->Print();
 
-  rate->Draw("nhit>>h1","wgt*(sample==0)");
-  rate->Draw("nhit>>h2","wgt*(sample==1)");
-  rate->Draw("nhit>>h3","wgt*(sample==2)");
-  rate->Draw("nhit>>h4","wgt*(sample==3)");
 
-  h1->SetLineColor(1);
-  h2->SetLineColor(2);
-  h3->SetLineColor(4);
-  h4->SetLineColor(3);
+  char cmda[100];
+  char cmdb[100];
 
-  hframe->SetMaximum(10.0);
-  //hframe->SetMinimum(1E-13);
-  hframe->SetMinimum(1E-25);
+  for (int i=0; i<4; i++){
+    sprintf(cmda, "%s>>h%d", var, i);
+    sprintf(cmdb, "wgt*((sample==%d)&&%s)", i, cuts);
+    cout << cmda << "\n";
+    cout << cmdb << "\n";
+    rate->Draw(cmda,cmdb);
+  }
+
+  h0->SetLineColor(1);
+  h1->SetLineColor(2);
+  h2->SetLineColor(4);
+  h3->SetLineColor(3);
+
+  hframe->SetMaximum(100.0);
+  hframe->SetMinimum(1E-20);
   hframe->Draw();
-  //h1->Draw("SAME");
-  //h2->Draw("SAME");
-  //h3->Draw("SAME");
-  h1->Draw("HSAME");
+  hframe->SetXTitle(var);
+
+
+  h0->Draw("HSAME");
+  h1->Draw("epSAME");
   h2->Draw("epSAME");
   h3->Draw("epSAME");
-  h4->Draw("epSAME");
 
+  char name[100];
+  sprintf(name, "%s.pdf", var);
+  c->SaveAs(name);
+
+  double r0 = h0->GetSumOfWeights();
   double r1 = h1->GetSumOfWeights();
   double r2 = h2->GetSumOfWeights();
   double r3 = h3->GetSumOfWeights();
-  double r4 = h4->GetSumOfWeights();
 
+  cout << "integrated total rate sample 0 (Hz/km2):  " << r0 << "\n";
   cout << "integrated total rate sample 1 (Hz/km2):  " << r1 << "\n";
   cout << "integrated total rate sample 2 (Hz/km2):  " << r2 << "\n";
   cout << "integrated total rate sample 3 (Hz/km2):  " << r3 << "\n";
-  cout << "integrated total rate sample 4 (Hz/km2):  " << r4 << "\n";
 
+  cout << "integrated total rate sample 0 (Hz/m2):  " << r0*1E-6 << "\n";
   cout << "integrated total rate sample 1 (Hz/m2):  " << r1*1E-6 << "\n";
   cout << "integrated total rate sample 2 (Hz/m2):  " << r2*1E-6 << "\n";
   cout << "integrated total rate sample 3 (Hz/m2):  " << r3*1E-6 << "\n";
-  cout << "integrated total rate sample 4 (Hz/m2):  " << r4*1E-6 << "\n";
 
+  cout << "integrated total rate sample 0 (Hz/m2/sr):  " << r0*1E-6/(2*3.1415) << "\n";
   cout << "integrated total rate sample 1 (Hz/m2/sr):  " << r1*1E-6/(2*3.1415) << "\n";
   cout << "integrated total rate sample 2 (Hz/m2/sr):  " << r2*1E-6/(2*3.1415) << "\n";
   cout << "integrated total rate sample 3 (Hz/m2/sr):  " << r3*1E-6/(2*3.1415) << "\n";
-  cout << "integrated total rate sample 4 (Hz/m2/sr):  " << r4*1E-6/(2*3.1415) << "\n";
-}
 
 
-void do_ereco(){
-  gStyle->SetOptStat(0);
-  TCanvas * c = new TCanvas();
-
-  double emin = 18.0;
-  double emax = 22.0;
-  int nbin = 50;
-  TH1F * hframe = new TH1F("hframe", "", nbin, emin, emax);
-  TH1F * h1 = new TH1F("h1", "", nbin, emin, emax);
-  TH1F * h2 = new TH1F("h2", "", nbin, emin, emax);
-  TH1F * h3 = new TH1F("h3", "", nbin, emin, emax);
-  TH1F * h4 = new TH1F("h4", "", nbin, emin, emax);
-  h1->Sumw2();
-  h2->Sumw2();
-  h3->Sumw2();
-  h4->Sumw2();
-
-
-  c->SetLogy();
-  
-  _file0->ls();
-  TTree * rate = _file0->Get("rate");
-  rate->Print();
-
-  rate->Draw("ereco>>h1","wgt*(sample==0)");
-  rate->Draw("ereco>>h2","wgt*(sample==1)");
-  rate->Draw("ereco>>h3","wgt*(sample==2)");
-  rate->Draw("ereco>>h4","wgt*(sample==3)");
-
-  h1->SetLineColor(1);
-  h2->SetLineColor(2);
-  h3->SetLineColor(4);
-  h4->SetLineColor(3);
-
-  hframe->SetMaximum(10.0);
-  hframe->SetMinimum(1E-25);
-  hframe->Draw();
-
-  h1->Draw("HSAME");
-  h2->Draw("epSAME");
-  h3->Draw("epSAME");
-  h4->Draw("epSAME");
 }

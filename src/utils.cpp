@@ -34,6 +34,13 @@ double delta_phi(double phi1, double phi2){
    return dphi;
 }
 
+double delta_phi_ambig(double phi1, double phi2){
+  double dphi = delta_phi(phi1,phi2);
+  if (dphi < -M_PI/2.0) dphi += M_PI;
+  if (dphi >= M_PI/2.0) dphi -= M_PI;   
+  return dphi;
+}
+
 double delta_sin2theta(double s2t1, double s2t2){
    double st1 = sqrt(fabs(s2t1));
    double st2 = sqrt(fabs(s2t2));

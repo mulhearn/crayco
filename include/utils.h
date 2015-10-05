@@ -20,8 +20,12 @@ public:
    double max;
 };
 
-// calculate phi2 - phi1 in -pi/2 to pi/2
+// calculate phi2 - phi1 in -pi to pi
 double delta_phi(double phi1, double phi2);
+
+// calculate minimum delta phi,
+// allowing for a +/- pi ambiguity:
+double delta_phi_ambig(double phi1, double phi2);
 
 // given sin2theta1 and sin2theta2, calculate theta2 minus theta1 in -pi/2 to pi/2
 double delta_sin2theta(double s2t1, double s2t2);

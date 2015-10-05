@@ -27,6 +27,7 @@ void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag){
 }
 
 shower_fcn::shower_fcn(){
+  int mode_cheat = 0;
   int mode_fix_theta_phi = 0;
   int mode_fix_x_y = 0;
 }
@@ -34,6 +35,51 @@ shower_fcn::shower_fcn(){
 shower_fcn & shower_fcn::instance(){ 
   static shower_fcn x;
   return x;
+}
+
+
+void shower_fcn::cheat(){ 
+  start_s_loge       =   gen_s_loge;	  
+  start_s_sin2theta  =   gen_s_sin2theta; 
+  start_s_phi        =   gen_s_phi;	  
+  start_s_x          =   gen_s_x; 	  
+  start_s_y          =   gen_s_y;         
+}
+
+void shower_fcn::estimate(){ 
+  start_s_sin2theta  =   0;
+  start_s_phi        =   0;
+
+  start_s_loge       =   log(1E18);
+  int best_count = 0;
+  start_s_x = 0;
+  start_s_y = 0;
+  double a = -d_size*500;
+  double b = d_size*500;
+  double step = 20;
+  double MIN_R2 = sq(100);
+
+  for (double x = a; x<b; x+=step){ 
+    for (double y = a; y<b; y+=step){       
+      int count = 0;
+      for (int i=0; i<d_x.size();i++){
+	if (d_h[i]==0) continue;
+	double dx = (d_x[i]-x);
+	double dy = (d_y[i]-y);
+	double r2 = dx*dx + dy*dy;
+	if (r2 < MIN_R2) count++;
+      }
+      //cout << x << " " << y << " " << count << "\n";
+      if (count > best_count){
+	best_count = count;
+	start_s_x = x;
+	start_s_y = y;
+      }
+    }
+  }  
+  //cout << "INFO: best count is  " << best_count << " out of a total of " << count_hits() << "\n";
+  //cout << "INFO: starting x position is:  " << start_s_x << "\n";
+  //cout << "INFO: starting y position is:  " << start_s_y << "\n";
 }
 
 double shower_fcn::count_hits(int nmin){
@@ -133,6 +179,17 @@ int shower_fit(int verbose){
      return 0;
   }
 
+  if (sfcn.mode_cheat){
+    static int warned = 0;
+    if (!warned){
+      cout << "WARNING:  cheating for the starting values, results may be optimistic...\n";
+      warned = 1;
+    }
+    sfcn.cheat();  
+  } else {
+    sfcn.estimate();
+  }
+
   TMinuit *gMinuit = new TMinuit(5);  //initialize TMinuit with a maximum of 5 params
   gMinuit->SetFCN(fcn);
 
@@ -149,14 +206,9 @@ int shower_fit(int verbose){
   gMinuit->mnexcm("SET ERR", arglist ,1,ierflg);
   
   // Set starting values and step sizes for parameters
-  //static Double_t vstart[3] = {sfcn.gen_s_loge,  sfcn.gen_s_theta,   sfcn.gen_s_phi};
-
-  // this is a bit of cheat, but we should be able to get rough estimate before fit:
-  // for now these are set near, but not identical to, the correct values...
-  Double_t vstart[] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi, sfcn.d_flat, sfcn.gen_s_x, sfcn.gen_s_y};  
-  
-  //static Double_t vstart[3] = {sfcn.gen_s_loge, sfcn.gen_s_sin2theta,  sfcn.gen_s_phi};  
+  Double_t vstart[] = {sfcn.start_s_loge, sfcn.start_s_sin2theta,  sfcn.start_s_phi, sfcn.d_flat, sfcn.start_s_x, sfcn.start_s_y};  
   Double_t step[]   = {10.0, 0.1, 0.1, 0.0, 10.0, 10.0};
+
   gMinuit->mnparm(0, "s_loge",       vstart[0], step[0], 0, 0, ierflg);
   gMinuit->mnparm(1, "s_sin2theta",  vstart[1], step[1], 0, 1.0, ierflg);
   gMinuit->mnparm(2, "s_phi",        vstart[2], step[2], 0, 0, ierflg);
@@ -172,7 +224,6 @@ int shower_fit(int verbose){
   gMinuit->FixParameter(5);
   
   // Now ready for minimization step
-
   arglist[0] = 10000;
   arglist[1] = 1.;
   gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
@@ -180,21 +231,55 @@ int shower_fit(int verbose){
     cout << "WARNING:  Minuit Status after MIGRAD (step 1):  " << gMinuit->GetStatus() << "\n";
   }
 
-  if (!sfcn.mode_fix_theta_phi){
-    gMinuit->Release(1);
-    gMinuit->Release(2);
-    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
-    if (gMinuit->GetStatus() != 0){
-      cout << "WARNING:  Minuit Status after MIGRAD (step 2):  " << gMinuit->GetStatus() << "\n";
-    }
-  }
-
   if (!sfcn.mode_fix_x_y){
     gMinuit->Release(4);
     gMinuit->Release(5);
     gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
     if (gMinuit->GetStatus() != 0){
-      cout << "WARNING:  Minuit Status after MIGRAD (step 3):  " << gMinuit->GetStatus() << "\n";
+      cout << "WARNING:  Minuit Status after MIGRAD (step 2):  " << gMinuit->GetStatus() << "\n";
+    } 
+  }
+
+  if (!sfcn.mode_fix_theta_phi){
+    gMinuit->FixParameter(0);
+    gMinuit->FixParameter(3);
+    gMinuit->FixParameter(4);
+    gMinuit->FixParameter(5);
+
+    // first find phi for a faily extreme value of theta:
+    if (!sfcn.mode_cheat){
+      gMinuit->mnparm(1, "s_sin2theta",  0.75, step[1], 0, 1.0, ierflg);
+    }
+    gMinuit->Release(2);
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 4):  " << gMinuit->GetStatus() << "\n";
+    }
+
+    // then find optimal theta holding phi constant:
+    gMinuit->FixParameter(1);
+    gMinuit->Release(2);
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 5):  " << gMinuit->GetStatus() << "\n";
+    }
+    // release everything but phi:
+    gMinuit->Release(0);
+    gMinuit->Release(2);
+    if (!sfcn.mode_fix_x_y){
+      gMinuit->Release(4);
+      gMinuit->Release(5);
+    }
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 6):  " << gMinuit->GetStatus() << "\n";
+    } 
+
+    // release everything:
+    gMinuit->Release(1);
+    gMinuit->mnexcm("MIGRAD", arglist ,2,ierflg);
+    if (gMinuit->GetStatus() != 0){
+      cout << "WARNING:  Minuit Status after MIGRAD (step 7):  " << gMinuit->GetStatus() << "\n";
     } 
   }
 
@@ -223,7 +308,6 @@ int shower_fit(int verbose){
     } else if (warn_count == 5){
       cout << "WARNING:  Supressing further warnings regarding istat...\n";
     }
-
   }
 
   delete gMinuit;

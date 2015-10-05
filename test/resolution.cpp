@@ -28,9 +28,13 @@ int main(int argc, char * argv[]){
   shower_fcn & sfcn = shower_fcn::instance();
   shower_mc mc;
 
-  if (argc < 10) { 
-    cout << "usage:  resolution <tag> <nruns> <nperkm2> <xs_mu> <xs_gamma> <flat> <emin> <emax> <escl>\n";
-    cout << "eg: resolution demo 100 1000 5E-5 1E19 1E21 10.0 \n";     
+  //sfcn.mode_cheat = 1;
+  //sfcn.mode_fix_theta_phi = 1;
+  //sfcn.mode_fix_x_y = 1;
+
+  if (argc < 11) { 
+    cout << "usage:  resolution <tag> <nruns> <nperkm2> <xs_mu> <xs_gamma> <flat> <size> <emin> <emax> <escl>\n";
+    cout << "eg: resolution demo 100 1000 5E-5 0 0 1 1E19 1E21 10.0 \n";     
     return 0; 
   }
 
@@ -40,11 +44,11 @@ int main(int argc, char * argv[]){
   mc.d_xs_mu       = atof(argv[4]);
   mc.d_xs_gamma    = atof(argv[5]);
   mc.d_flat        = atof(argv[6]);
-  double emin      = atof(argv[7]);
-  double emax      = atof(argv[8]);
-  double escl      = atof(argv[9]);
+  mc.d_size        = atof(argv[7]);
+  double emin      = atof(argv[8]);
+  double emax      = atof(argv[9]);
+  double escl      = atof(argv[10]);
 
-  mc.d_size = 1.0;
   mc.print();
 
   char fname[200];
@@ -80,7 +84,7 @@ int main(int argc, char * argv[]){
       calc_stats pres;
       calc_stats tres;
       for (int i=0; i<nruns; i++){
-	mc.generate(E, QUIET, 0.75);
+	mc.generate(E, QUIET, 0.38);
 	if (shower_fit(QUIET)){      
 	  ifit++;
 	  double e_fit = exp(sfcn.fit_s_loge);
@@ -88,7 +92,7 @@ int main(int argc, char * argv[]){
 	  double e_fres = (e_fit - e_gen) / e_gen;
 	  //cout << "e_fres:  " << e_fres << "\n";
 	  if (fabs(e_fres) < 5.0){
-	    double dp = delta_phi(sfcn.fit_s_phi,sfcn.gen_s_phi);
+	    double dp = delta_phi_ambig(sfcn.fit_s_phi,sfcn.gen_s_phi);
 	    double dt = delta_sin2theta(sfcn.fit_s_sin2theta, sfcn.gen_s_sin2theta);
 	    eres.add(e_fres);
 	    pres.add(dp);

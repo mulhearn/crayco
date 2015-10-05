@@ -21,6 +21,10 @@ class shower_mc {
 
   void flat_in_circle(double r, double & x, double & y);
 
+
+  int prescale(double f);  // keep 1:f events with wgt scaled by f, returns 1 if event is kept, 0 otherwise.
+
+
   // this is called at start of the the top-level generate routines,
   // but not if mode_manual_locations != 0.
   void generate_locations();

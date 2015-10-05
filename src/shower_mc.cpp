@@ -45,6 +45,7 @@ void shower_mc::init_shower_fcn(){
   sfcn.d_xs_gamma       = d_xs_gamma;
   sfcn.d_xs_mu          = d_xs_mu;
   sfcn.d_flat           = d_flat; 
+  sfcn.d_size           = d_size; 
   sfcn.gen_s_loge       = 0;
   sfcn.gen_s_sin2theta  = 0;
   sfcn.gen_s_phi        = 0;
@@ -56,6 +57,18 @@ void shower_mc::flat_in_circle(double r, double & x, double & y){
     x = (-1.0 + 2.0*rng.Uniform()) * r;
     y = (-1.0 + 2.0*rng.Uniform()) * r;    
   } while ((x*x + y*y) > r2);
+}
+
+
+int shower_mc::prescale(double f){
+  double x = rng.Uniform()*f;
+  if (x > 1.0){
+    wgt = 0;
+    return 0;
+  } else {
+    wgt = wgt*f;
+    return 1;
+  }
 }
 
 void shower_mc::generate_locations(){
@@ -100,6 +113,7 @@ void shower_mc::generate(double s_loge, double s_sin2theta, double s_phi, int ve
      cout << "INFO:  d_size:  " << d_size << "\n";
      cout << "INFO:  d_flat:  " << d_flat << "\n";
    }
+
 
    int nhit = 0;
    sfcn.d_h.clear();

@@ -16,6 +16,7 @@
 
 #include "TMinuit.h"
 #include <Math/ProbFuncMathCore.h>
+#include <vector>
 
 #include "shower_model.h"
 #include "utils.h"
@@ -26,24 +27,31 @@ using namespace std;
 
 TTree * tree;
 int sample;
+int istat;
 int nhit;
 int ncore;
+int mcore;
 double ereco;
 double ureco;
 double eshower;
 double sigf, llr;
 
 int mode_dofit;
-int mode_colocated;
+int mode_colocate_phones;
 double zbrate;  // zero-bias rate, for scaling...
 double rshower=0; 
 double noise_tol = 1E-18;
+
+
 
 
 void nhits_study(shower_mc & mc, double nruns, const char * tag){
   TGraph * gnhits;
   TH1F * hnhits;
   shower_fcn & sfcn = shower_fcn::instance();
+
+
+
   static const int MAX = 1000;
   static double n[MAX];
   static double p[MAX];
@@ -123,6 +131,33 @@ void shower_rate_study(shower_mc & mc, int nruns, double Emin, double Emax, cons
   hw->Write();
 }
 
+int max_core(double d_size, double r_size){
+  shower_fcn & sfcn = shower_fcn::instance();
+  int best_count = 0;
+  double a = -d_size*500;
+  double b = d_size*500;
+  double step = 20;
+  double MIN_R2 = sq(r_size);
+
+  for (double x = a; x<b; x+=step){ 
+    for (double y = a; y<b; y+=step){       
+      int count = 0;
+      for (int i=0; i<sfcn.d_x.size();i++){
+	if (sfcn.d_h[i]==0) continue;
+	double dx = (sfcn.d_x[i]-x);
+	double dy = (sfcn.d_y[i]-y);
+	double r2 = dx*dx + dy*dy;
+	if (r2 < MIN_R2) count++;
+      }
+      //cout << x << " " << y << " " << count << "\n";
+      if (count > best_count){
+	best_count = count;
+      }
+    }
+  }  
+  return best_count;
+}
+
 void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
   shower_fcn & sfcn = shower_fcn::instance();
   double rate_scale = 1.0;
@@ -155,8 +190,23 @@ void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
     if (i%100 == 0) cout << i << "\n";
     i++;
     
+    if (mode_colocate_phones){
+      double x = (-500.0 + mc.rng.Uniform() * 1000) * mc.d_size;
+      double y = (-500.0 + mc.rng.Uniform() * 1000) * mc.d_size;
+      sfcn.d_x.clear();
+      sfcn.d_y.clear();
+      for (int i=0; i<mc.d_n;i++){
+	sfcn.d_x.push_back(x);
+	sfcn.d_y.push_back(y);
+      }
+    }
+
     if (noise_only) {
       mc.weighted_noise(QUIET); 
+      int n = sfcn.count_hits();
+
+      if (n < 5) {if (!mc.prescale(10.0)) continue;}
+
       tot_wgt += mc.wgt;
       count   += mc.wgt; // not a bug!  (we produce the weighted equivalent of nruns of noise data...)  
       eshower = 0.0;      
@@ -174,24 +224,25 @@ void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
     sfcn.gen_s_loge = log(1E10);
     nhit    = sfcn.count_hits();      
     ncore   = sfcn.count_hits_core(150.0);
+    mcore   = max_core(1.0, 150.0);
     mc.wgt  = mc.wgt * rate_scale;
-
-    
 
     sigf  = 0;
     llr   = 0;
     ereco = 0.0;
     ureco = 0.0;
-
-    if (mode_dofit){
+    istat = -1;
+    if (mode_dofit && (nhit > 5.0)){
       if (shower_fit(QUIET)){
 	sigf    = sfcn.fit_s_loge / sfcn.unc_s_loge / sqrt(mc.tot_n());
 	llr     = (sfcn.noise_only_fcn() - sfcn.fmin) / mc.tot_n();            
 	ereco   = sfcn.fit_s_loge / log(10.0);
 	ureco   = sfcn.unc_s_loge / log(10.0);
+	istat   = sfcn.istat;
       }   
-      tree->Fill();
     }
+    tree->Fill();
+
   }
   cout << "INFO:  threw " << count << " events with total weight of " << tot_wgt << "\n";
 }
@@ -200,16 +251,19 @@ void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
 int main(int argc, char * argv[]){      
    shower_fcn & sfcn = shower_fcn::instance();
    shower_mc mc;
+   char name[100];
 
-   mode_colocated = 0;
+   sfcn.mode_fix_theta_phi = 1;
+   mode_colocate_phones = 0;
+
 
    //cout << flux(1E20)*1E20 << "\n";
    //cout << flux(1E19)*1E19 << "\n";
    //return 0;
 
-   if (argc < 6) { 
-     cout << "usage:  noise_study <mode> <fit> <nruns> <nperkm2> <xs_mu> <xs_gamma> <tres>\n";
-     cout << "eg: rate_study 0 0 100 1000 5E-5 0.0 0.2\n";     
+   if (argc < 9) { 
+     cout << "usage:  noise_study <tag> <mode> <fit> <nruns> <nperkm2> <xs_mu> <xs_gamma> <tres> [ENERGIES]\n";
+     cout << "eg: rate_study demo 0 0 100 1000 5E-5 0.0 0.2 1E16 1E19 1E20\n";     
      cout << "mode = 0:  default mode\n";
      cout << "mode = 1:  weighted/unweighted nhit cross check\n";
      cout << "mode = 2:  shower energy rate cross check\n";
@@ -217,13 +271,21 @@ int main(int argc, char * argv[]){
      return 0; 
    }
 
-   int mode      = atoi(argv[1]);
-   mode_dofit    = atoi(argv[2]);
-   int nruns     = atoi(argv[3]);
-   mc.d_n        = atoi(argv[4]);
-   mc.d_xs_mu    = atof(argv[5]);
-   mc.d_xs_gamma = atof(argv[6]);
-   double tres   = atof(argv[7]);
+   const char * tag = argv[1];
+   int mode      = atoi(argv[2]);
+   mode_dofit    = atoi(argv[3]);
+   int nruns     = atoi(argv[4]);
+   mc.d_n        = atoi(argv[5]);
+   mc.d_xs_mu    = atof(argv[6]);
+   mc.d_xs_gamma = atof(argv[7]);
+   double tres   = atof(argv[8]);
+   vector<double> ebenchmark;
+   for (int i=9; i<argc; i++){
+     double E = atof(argv[i]);
+     cout << "INFO: adding benchmark at E=" << E << "\n";
+     ebenchmark.push_back(E);
+   }
+
    zbrate = 1.0 / tres;
    double murate = 0.01; // Hz
    mc.d_flat = murate * tres;
@@ -238,10 +300,6 @@ int main(int argc, char * argv[]){
    if (mode_dofit){
      cout << "INFO: will perform fit!\n";
    }
-   //CUT1 = atof(argv[5]);
-   //CUT2 = atof(argv[6]);
-   //cout << "applying CUT1:  " << CUT1 << "\n";
-   //cout << "applying CUT2:  " << CUT2 << "\n";
 
    mc.rng.SetSeed(2014);
 
@@ -259,8 +317,9 @@ int main(int argc, char * argv[]){
      return 0;
    }
    
-
-   TFile fout("rate.root", "RECREATE");
+   sprintf(name,"rate_%s.root", tag);
+   cout << "INFO: writing to file " << name << "\n";
+   TFile fout(name, "RECREATE");
    fout.cd();
    tree = new TTree("rate","");
 
@@ -276,47 +335,33 @@ int main(int argc, char * argv[]){
    tree->Branch("wgt",&mc.wgt);
    tree->Branch("nhit",&nhit);
    tree->Branch("ncore",&ncore);
+   tree->Branch("mcore",&mcore);
    tree->Branch("ereco",&ereco);
    tree->Branch("ureco",&ureco);
    tree->Branch("eshower",&eshower);
    tree->Branch("sigf",&sigf);
    tree->Branch("llr",&llr);
    tree->Branch("sample",&sample);
+   tree->Branch("istat",&istat);
    mc.print();
 
    sample = 0;
 
-   if (mode == 0){  //cross-check...
-     noise_study(mc, nruns/2.0,   0,    0);
-     sample = 1;
-     noise_study(mc, 3*nruns, 1E16, 1E21);
-     sample = 2;
-     noise_study(mc, 2*nruns,   1E19, 1E21);
-     sample = 3;
-     noise_study(mc, nruns,   1E20, 1E21);
-     tree->Write();
-     fout.Close();
+   if (mode == 4){  
+     mc.mode_manual_locations=1;
+     mode_colocate_phones=1;
    }
 
-
-
-   if (mode == 4) {
-     //mc.d_size     = 0.1;
-     //noise_tol     = 1E-35;
-     noise_study(mc, nruns/2.0,   0,    0);
-     sample = 1;
-     noise_study(mc, 3*nruns, 1E18, 1E21);
-     sample = 2;
-     noise_study(mc, 2*nruns, 1E19, 1E21);
-     sample = 3;
-     noise_study(mc, nruns,   1E20, 1E21);
-     tree->Write();
-     fout.Close();
+   noise_study(mc, 2*nruns,   0,    0);
+   for (int i=0; i<ebenchmark.size(); i++){
+     double E = ebenchmark[i];
+     double f = log(1E21/E) / log(10.0);
+     if (f< 1.0) f=1.0;
+     sample++;
+     cout << "INFO: sample " << sample << " E:  " << E << " stat factor:  " << f << "\n";
+     noise_study(mc, f*nruns, E, 1E21);
    }
-
-
-
-
-
+   tree->Write();
+   fout.Close();
    return 0;
 }
