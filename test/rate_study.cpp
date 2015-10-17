@@ -43,14 +43,12 @@ double rshower=0;
 double noise_tol = 1E-18;
 
 
-
+double min_hits = 5;
 
 void nhits_study(shower_mc & mc, double nruns, const char * tag){
   TGraph * gnhits;
   TH1F * hnhits;
   shower_fcn & sfcn = shower_fcn::instance();
-
-
 
   static const int MAX = 1000;
   static double n[MAX];
@@ -161,6 +159,9 @@ int max_core(double d_size, double r_size){
 void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
   shower_fcn & sfcn = shower_fcn::instance();
   double rate_scale = 1.0;
+  
+  
+  
 
 
   int noise_only = 0;
@@ -205,7 +206,7 @@ void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
       mc.weighted_noise(QUIET); 
       int n = sfcn.count_hits();
 
-      if (n < 5) {if (!mc.prescale(10.0)) continue;}
+      if (n < 10) {if (!mc.prescale(10.0)) continue;}
 
       tot_wgt += mc.wgt;
       count   += mc.wgt; // not a bug!  (we produce the weighted equivalent of nruns of noise data...)  
@@ -232,7 +233,8 @@ void noise_study(shower_mc & mc, int nruns, double Emin, double Emax){
     ereco = 0.0;
     ureco = 0.0;
     istat = -1;
-    if (mode_dofit && (nhit > 5.0)){
+    //double noise_hits = mc.d_size * mc.d_n * mc.d_flat;
+    if (mode_dofit && (nhit > min_hits)){
       if (shower_fit(QUIET)){
 	sigf    = sfcn.fit_s_loge / sfcn.unc_s_loge / sqrt(mc.tot_n());
 	llr     = (sfcn.noise_only_fcn() - sfcn.fmin) / mc.tot_n();            
@@ -304,20 +306,20 @@ int main(int argc, char * argv[]){
    mc.rng.SetSeed(2014);
 
    if (mode == 1){
-     TFile fout("noise_control.root", "RECREATE");
+     TFile fout("root/noise_control.root", "RECREATE");
      fout.cd();
      nhits_study(mc, nruns, "noise_control");     
      return 0;
    }
 
    if (mode == 2){
-     TFile fout("eshower_control.root", "RECREATE");
+     TFile fout("root/eshower_control.root", "RECREATE");
      fout.cd();     
      shower_rate_study(mc, nruns, 1E10, 1E20, "eshower_control");     
      return 0;
    }
    
-   sprintf(name,"rate_%s.root", tag);
+   sprintf(name,"root/rate_%s.root", tag);
    cout << "INFO: writing to file " << name << "\n";
    TFile fout(name, "RECREATE");
    fout.cd();

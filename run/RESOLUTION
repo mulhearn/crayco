@@ -1,0 +1,28 @@
+
+./bin/resolution short_500_opt  100 500  5E-5   5E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_1000_opt 100 1000 5E-5   5E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_5000_opt 100 5000 5E-5   5E-9  0.005 1 1E19 1E21 10.0 
+
+./bin/resolution short_500_mdm  100 500  1E-5   1E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_1000_mdm 100 1000 1E-5   1E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_5000_mdm 100 5000 1E-5   1E-9  0.005 1 1E19 1E21 10.0 
+
+./bin/resolution short_500_psm  100 500  0      1E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_1000_psm 100 1000 0      1E-9  0.005 1 1E19 1E21 10.0 
+./bin/resolution short_5000_psm 100 5000 0      1E-9  0.005 1 1E19 1E21 10.0 
+
+./bin/resolution full_500_opt  1000 500  5E-5   5E-9  0.005 1 1E19 1E21 2.0 
+./bin/resolution full_500_mdm  1000 500  1E-5   1E-9  0.005 1 1E19 1E21 2.0 
+
+./bin/resolution full_1000_opt 1000 1000 5E-5   5E-9  0.005 1 1E19 1E21 2.0 
+./bin/resolution full_1000_mdm 1000 1000 1E-5   1E-9  0.005 1 1E19 1E21 2.0 
+
+./bin/resolution full_5000_opt 1000 5000 5E-5   5E-9  0.005 1 1E19 1E21 2.0 
+./bin/resolution full_5000_mdm 1000 5000 1E-5   1E-9  0.005 1 1E19 1E21 2.0 
+
+#./bin/resolution full_500_psm  1000 500  0      1E-9  0.005 1 1E19 1E21 2.0 
+#./bin/resolution full_1000_psm 1000 1000 0      1E-9  0.005 1 1E19 1E21 2.0 
+#./bin/resolution full_5000_psm 1000 5000 0      1E-9  0.005 1 1E19 1E21 2.0 
+
+
+

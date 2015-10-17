@@ -49,10 +49,14 @@ int main(int argc, char * argv[]){
   double emax      = atof(argv[9]);
   double escl      = atof(argv[10]);
 
+
+  double noise_hits = mc.d_size * mc.d_n * mc.d_flat;
+  cout << "INFO:  average noise hits " << noise_hits << "\n";
+
   mc.print();
 
   char fname[200];
-  sprintf(fname, "resolution_%s.root", tag);
+  sprintf(fname, "root/resolution_%s.root", tag);
   TFile f(fname, "RECREATE"); 
    
   // data for the standard graphs.
@@ -78,7 +82,7 @@ int main(int argc, char * argv[]){
     pen.push_back(E);
     mhits.push_back(mean_hits);
 
-    if (mean_hits >= 5.0){
+    if ((mean_hits - noise_hits) >= 5.0){
       double cnt=0;
       calc_stats eres;
       calc_stats pres;
@@ -91,7 +95,9 @@ int main(int argc, char * argv[]){
 	  double e_gen = exp(sfcn.gen_s_loge);
 	  double e_fres = (e_fit - e_gen) / e_gen;
 	  //cout << "e_fres:  " << e_fres << "\n";
-	  if (fabs(e_fres) < 5.0){
+	  //cout << sfcn.istat << "\n";
+	  //cout << fabs(e_fres) << "\n";
+	  if ((fabs(e_fres) < 5.0)&&(sfcn.istat == 3)){
 	    double dp = delta_phi_ambig(sfcn.fit_s_phi,sfcn.gen_s_phi);
 	    double dt = delta_sin2theta(sfcn.fit_s_sin2theta, sfcn.gen_s_sin2theta);
 	    eres.add(e_fres);
@@ -104,18 +110,25 @@ int main(int argc, char * argv[]){
 	} else {
 	  fit_fails++;
 	}      
-      }	
-      cout << " -->    frac energy resolution:  " << eres.rms() << " bias:  " << eres.mean() << "\n";
-      cout << " -->    theta resolution:        " << tres.rms() << " bias:  " << tres.mean() << "\n";
-      cout << " -->    phi resolution:          " << pres.rms() << " bias:  " << pres.mean() << "\n";
-	
-      pen_fit.push_back(E);
-      erms.push_back(eres.rms());
-      eunc.push_back(eres.rms() / sqrt(cnt));
-      trms.push_back(tres.rms());
-      tunc.push_back(tres.rms() / sqrt(cnt));
-      prms.push_back(pres.rms());
-      punc.push_back(pres.rms() / sqrt(cnt));
+      }
+      if (cnt > 0.5*nruns){
+	cout << " -->    frac energy resolution:  " << eres.rms() << " bias:  " << eres.mean() << "\n";
+	cout << " -->    theta resolution:        " << tres.rms() << " bias:  " << tres.mean() << "\n";
+	cout << " -->    phi resolution:          " << pres.rms() << " bias:  " << pres.mean() << "\n";
+		
+	// bad bias will be reported as zero efficiency:
+	if (fabs(eres.mean()) > 0.5) continue;
+	if (fabs(tres.mean()) > 0.5) continue;
+	if (fabs(pres.mean()) > 0.5) continue;
+
+	pen_fit.push_back(E);
+	erms.push_back(eres.rms());
+	eunc.push_back(eres.rms() / sqrt(cnt));
+	trms.push_back(tres.rms());
+	tunc.push_back(tres.rms() / sqrt(cnt));
+	prms.push_back(pres.rms());
+	punc.push_back(pres.rms() / sqrt(cnt));
+      }
     }
   }
 
